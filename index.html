@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מערכת תזכורות תשלום - הזנה</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json"> 
 </head>
 <body>
     <div class="container">
@@ -35,7 +36,6 @@
                 return;
             }
 
-            // חילוץ היום מהתאריך המלא שהוזן (הוא יהיה הבסיס לבדיקה החודשית)
             const paymentDateObj = new Date(fullDate);
             const paymentDay = paymentDateObj.getDate(); 
             
@@ -46,10 +46,8 @@
 
             const clientData = { 
                 name: name, 
-                // היום שחולץ (1-31)
                 day: paymentDay, 
                 time: time,
-                // התאריך המלא שהוזן, למידע נוסף
                 startDate: fullDate 
             };
 
@@ -67,7 +65,6 @@
 
             alert(`✅ הלקוח ${name} נשמר בהצלחה! תזכורת תופיע ביום ${paymentDay} בכל חודש בשעה ${time}.`);
 
-            // איפוס טופס
             document.getElementById('clientName').value = '';
             document.getElementById('paymentDate').value = '';
             document.getElementById('reminderTime').value = '';
