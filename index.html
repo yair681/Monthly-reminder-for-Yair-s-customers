@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערכת תזכורות תשלום - הזנה</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>הזנת לקוח חדש לתזכורת חודשית</h1>
+        
+        <label for="clientName">שם הלקוח:</label>
+        <input type="text" id="clientName" placeholder="שם הלקוח" required>
+    
+        <label for="paymentDay">יום בחודש לתזכורת (1-31):</label>
+        <input type="number" id="paymentDay" min="1" max="31" placeholder="לדוגמה: 5" required>
+    
+        <label for="reminderTime">שעה מומלצת ליצירת קשר:</label>
+        <input type="time" id="reminderTime" required>
+    
+        <button onclick="saveClient()">שמור לקוח והתחל תזכורת</button>
+
+        <a href="alerts.html" style="display:block; text-align:center; margin-top:20px;">מעבר למסך ההתראות</a>
+    </div>
+
+    <script>
+        // פונקציה לשמירת נתונים ב-localStorage (מדמה שרת ומסד נתונים)
+        function saveClient() {
+            const name = document.getElementById('clientName').value.trim();
+            const day = document.getElementById('paymentDay').value;
+            const time = document.getElementById('reminderTime').value;
+
+            if (!name || !day || !time || parseInt(day) < 1 || parseInt(day) > 31) {
+                alert("⚠️ אנא מלא את כל השדות בצורה תקינה.");
+                return;
+            }
+
+            const clientData = { 
+                name: name, 
+                day: parseInt(day), 
+                time: time 
+            };
+
+            // קבלת הרשימה הקיימת או יצירת רשימה חדשה
+            const clientsJson = localStorage.getItem('monthlyClients');
+            const clients = clientsJson ? JSON.parse(clientsJson) : [];
+
+            // בדיקה אם הלקוח כבר קיים (למנוע כפילויות)
+            const existingClient = clients.find(c => c.name === name);
+            if (existingClient) {
+                alert(`⚠️ הלקוח ${name} כבר שמור במערכת!`);
+                return;
+            }
+
+            clients.push(clientData);
+            localStorage.setItem('monthlyClients', JSON.stringify(clients));
+
+            alert(`✅ הלקוח ${name} נשמר בהצלחה! תזכורת תופיע ביום ${day} בכל חודש בשעה ${time}.`);
+
+            // איפוס טופס
+            document.getElementById('clientName').value = '';
+            document.getElementById('paymentDay').value = '';
+            document.getElementById('reminderTime').value = '';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&display=swap');
+
+:root {
+    --primary-color: #4CAF50; /* ירוק */
+    --secondary-color: #f4f4f4; /* אפור בהיר */
+    --text-color: #333;
+    --alert-color: #e57373; /* אדום בהיר להתראה */
+    --card-bg: #fff;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Heebo', sans-serif;
+    direction: rtl;
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    display: flex;
+    justify-content: center;
+    padding: 40px;
+}
+
+.container {
+    background-color: var(--card-bg);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    max-width: 600px;
+    width: 100%;
+}
+
+h1 {
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 25px;
+    border-bottom: 3px solid var(--primary-color);
+    padding-bottom: 10px;
+}
+
+label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="time"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1em;
+}
+
+button {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.1em;
+    margin-top: 20px;
+    width: 100%;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #43A047;
+}
+
+/* עיצוב ספציפי להתראות */
+#alertsContainer {
+    margin-top: 20px;
+}
+
+.alert-item {
+    background-color: var(--alert-color);
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border-left: 5px solid #d32f2f;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.1em;
+    font-weight: 400;
+}
+
+.no-alerts {
+    background-color: #e8f5e9; /* ירוק עדין */
+    color: var(--primary-color);
+    text-align: center;
+    padding: 20px;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.alert-details {
+    flex-grow: 1;
+}
+.alert-details strong {
+    font-weight: 700;
+}
+.alert-time {
+    font-size: 0.9em;
+    opacity: 0.8;
+}
