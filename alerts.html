@@ -5,17 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מערכת תזכורות תשלום - התראות</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json"> 
 </head>
 <body>
     <div class="container">
         <h1>התראות תשלום להיום: <span id="currentDate"></span></h1>
         
-        <button class="permission-btn" onclick="requestPushSubscription()">הירשם להתראות דחיפה 📢</button>
-        <p style="font-size:0.8em; color:gray; text-align:center;">
-            * עובד ב-PWA / דפדפן פתוח (דורש שרת Backend לשליחה כשהדף סגור).
-        </p>
-
         <div id="alertsContainer">
             </div>
 
@@ -24,130 +18,36 @@
     </div>
 
     <script>
-        // *** פונקציות Service Worker ורישום לדחיפה ***
-        
-        // מפתח VAPID ציבורי קונספטואלי (חייב להחליף במפתח השרת שלך)
-        const VAPID_PUBLIC_KEY = 'BPPnN4lW3g44U0oKz-zL-5Yv3iJ_qfFpA5l_qD0eM-J9rP8L_c2s3T7X7S7O2I7N2P8N8E4D5W2Y4A4'; 
-
-        function urlBase64ToUint8Array(base64String) {
-            const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-            const rawData = window.atob(base64);
-            const outputArray = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) {
-                outputArray[i] = rawData.charCodeAt(i);
-            }
-            return outputArray;
-        }
-
-        async function requestPushSubscription() {
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                alert("❌ הדפדפן שלך אינו תומך בהתראות דחיפה.");
-                return;
-            }
-            try {
-                const permission = await Notification.requestPermission();
-                if (permission !== 'granted') {
-                    alert('❌ סירבת לקבל התראות דחיפה.');
-                    return;
-                }
-                const registration = await navigator.serviceWorker.register('sw.js');
-                const subscribeOptions = {
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-                };
-                const subscription = await registration.pushManager.subscribe(subscribeOptions);
-
-                console.log('User is subscribed:', subscription);
-                alert('✅ נרשמת בהצלחה להתראות דחיפה! (יש צורך לשלוח את פרטי המנוי לשרת Backend).');
-
-            } catch (error) {
-                console.error('שגיאה בתהליך הרישום לדחיפה:', error);
-                alert('❌ שגיאה בהרשמה. ודא שאתה משתמש ב-HTTPS/Live Server.');
-            }
-        }
-        
-        // *** פונקציות טיפול בנתונים וכפתורים ***
-        
-        function displayBrowserNotification(clientName, clientTime) {
-            if (Notification.permission === 'granted' && document.visibilityState === 'visible') {
-                new Notification("🔔 תזכורת תשלום חודשית!", {
-                    body: `יש ליצור קשר עם הלקוח: ${clientName}. שעה מומלצת: ${clientTime}.`,
-                    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💰</text></svg>'
-                });
-            }
-        }
-        
-        function saveClients(clients) {
-            localStorage.setItem('monthlyClients', JSON.stringify(clients));
-        }
-
-        function deleteClient(nameToDelete) {
-            if (!confirm(`האם אתה בטוח שברצונך למחוק את הלקוח ${nameToDelete} לצמיתות?`)) return;
-            const clientsJson = localStorage.getItem('monthlyClients');
-            const clients = clientsJson ? JSON.parse(clientsJson) : [];
-            const updatedClients = clients.filter(client => client.name !== nameToDelete);
-            saveClients(updatedClients);
-            alert(`הלקוח ${nameToDelete} נמחק לצמיתות.`);
-            checkAlerts(); 
-        }
-
-        function markAsDone(nameToMark) {
-            const todayDate = new Date().toISOString().split('T')[0]; 
-            const clientsJson = localStorage.getItem('monthlyClients');
-            let clients = clientsJson ? JSON.parse(clientsJson) : [];
-            clients = clients.map(client => {
-                if (client.name === nameToMark) {
-                    return { ...client, lastReminderDate: todayDate };
-                }
-                return client;
-            });
-            saveClients(clients);
-            alert(`הלקוח ${nameToMark} סומן כטופל לחודש זה.`);
-            checkAlerts(); 
-        }
-
-        // *** פונקציה ראשית לבדיקה והצגה ***
         function checkAlerts() {
             const today = new Date();
+            // היום הנוכחי בחודש (לדוגמה: 17)
             const todayDayOfMonth = today.getDate(); 
-            const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-
             const alertsContainer = document.getElementById('alertsContainer');
             alertsContainer.innerHTML = ''; 
             
+            // הצגת התאריך הנוכחי
             const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('currentDate').textContent = today.toLocaleDateString('he-IL', dateOptions);
 
+            // שליפת הנתונים השמורים
             const clientsJson = localStorage.getItem('monthlyClients');
             const clients = clientsJson ? JSON.parse(clientsJson) : [];
             let alertsFound = false;
 
             clients.forEach(client => {
-                const isPaymentDay = client.day === todayDayOfMonth;
-                const isMarkedDoneThisMonth = client.lastReminderDate && client.lastReminderDate >= startOfCurrentMonth;
-
-                if (isPaymentDay && !isMarkedDoneThisMonth) {
+                // הבדיקה המרכזית: האם יום התשלום השמור זהה ליום הנוכחי בחודש
+                if (client.day === todayDayOfMonth) {
                     alertsFound = true;
-                    
-                    displayBrowserNotification(client.name, client.time);
-
                     const alertDiv = document.createElement('div');
                     alertDiv.className = 'alert-item';
                     alertDiv.innerHTML = `
-                        <div class="alert-header">
-                            <div class="alert-details">
-                                <strong>תזכורת דחופה!</strong> יש ליצור קשר עם הלקוח: 
-                                <span style="font-weight:bold; font-size:1.2em;">${client.name}</span>
-                            </div>
+                        <div class="alert-details">
+                            <strong>תזכורת דחופה!</strong> יש ליצור קשר עם הלקוח: 
+                            <span style="font-weight:bold; font-size:1.2em;">${client.name}</span>
                         </div>
                         <div class="alert-time">
                             יום תשלום חודשי: ${client.day} | שעה מומלצת: ${client.time}
                             ${client.startDate ? '<br><span>תאריך התחלה: ' + client.startDate + '</span>' : ''}
-                        </div>
-                        <div class="alert-actions">
-                            <button class="done-btn" onclick="markAsDone('${client.name}')">הזכרתי החודש ✅</button>
-                            <button class="delete-btn" onclick="deleteClient('${client.name}')">מחק התראה לתמיד 🗑️</button>
                         </div>
                     `;
                     alertsContainer.appendChild(alertDiv);
@@ -155,10 +55,11 @@
             });
 
             if (!alertsFound) {
-                alertsContainer.innerHTML = '<div class="no-alerts">🎉 אין תזכורות תשלום פעילות להיום. 🎉</div>';
+                alertsContainer.innerHTML = '<div class="no-alerts">🎉 אין תזכורות תשלום להיום. כל הכבוד! 🎉</div>';
             }
         }
 
+        // הפעלת הבדיקה מיד לאחר טעינת הדף
         checkAlerts();
     </script>
 </body>
