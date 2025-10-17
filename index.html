@@ -13,40 +13,49 @@
         <label for="clientName">שם הלקוח:</label>
         <input type="text" id="clientName" placeholder="שם הלקוח" required>
     
-        <label for="paymentDay">יום בחודש לתזכורת (1-31):</label>
-        <input type="number" id="paymentDay" min="1" max="31" placeholder="לדוגמה: 5" required>
+        <label for="paymentDate">תאריך התשלום הראשון (היום יקבע את התזכורת החודשית):</label>
+        <input type="date" id="paymentDate" required> 
     
         <label for="reminderTime">שעה מומלצת ליצירת קשר:</label>
         <input type="time" id="reminderTime" required>
     
         <button onclick="saveClient()">שמור לקוח והתחל תזכורת</button>
 
-        <a href="alerts.html" style="display:block; text-align:center; margin-top:20px;">מעבר למסך ההתראות</a>
+        <a href="alerts.html">מעבר למסך ההתראות</a>
     </div>
 
     <script>
-        // פונקציה לשמירת נתונים ב-localStorage (מדמה שרת ומסד נתונים)
         function saveClient() {
             const name = document.getElementById('clientName').value.trim();
-            const day = document.getElementById('paymentDay').value;
+            const fullDate = document.getElementById('paymentDate').value; 
             const time = document.getElementById('reminderTime').value;
 
-            if (!name || !day || !time || parseInt(day) < 1 || parseInt(day) > 31) {
+            if (!name || !fullDate || !time) {
                 alert("⚠️ אנא מלא את כל השדות בצורה תקינה.");
+                return;
+            }
+
+            // חילוץ היום מהתאריך המלא שהוזן (הוא יהיה הבסיס לבדיקה החודשית)
+            const paymentDateObj = new Date(fullDate);
+            const paymentDay = paymentDateObj.getDate(); 
+            
+            if (isNaN(paymentDay)) {
+                alert("⚠️ אנא ודא שהתאריך שהוזן תקין.");
                 return;
             }
 
             const clientData = { 
                 name: name, 
-                day: parseInt(day), 
-                time: time 
+                // היום שחולץ (1-31)
+                day: paymentDay, 
+                time: time,
+                // התאריך המלא שהוזן, למידע נוסף
+                startDate: fullDate 
             };
 
-            // קבלת הרשימה הקיימת או יצירת רשימה חדשה
             const clientsJson = localStorage.getItem('monthlyClients');
             const clients = clientsJson ? JSON.parse(clientsJson) : [];
 
-            // בדיקה אם הלקוח כבר קיים (למנוע כפילויות)
             const existingClient = clients.find(c => c.name === name);
             if (existingClient) {
                 alert(`⚠️ הלקוח ${name} כבר שמור במערכת!`);
@@ -56,11 +65,11 @@
             clients.push(clientData);
             localStorage.setItem('monthlyClients', JSON.stringify(clients));
 
-            alert(`✅ הלקוח ${name} נשמר בהצלחה! תזכורת תופיע ביום ${day} בכל חודש בשעה ${time}.`);
+            alert(`✅ הלקוח ${name} נשמר בהצלחה! תזכורת תופיע ביום ${paymentDay} בכל חודש בשעה ${time}.`);
 
             // איפוס טופס
             document.getElementById('clientName').value = '';
-            document.getElementById('paymentDay').value = '';
+            document.getElementById('paymentDate').value = '';
             document.getElementById('reminderTime').value = '';
         }
     </script>
