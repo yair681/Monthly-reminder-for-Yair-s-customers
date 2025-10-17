@@ -13,48 +13,47 @@
         <div id="alertsContainer">
             </div>
 
-        <a href="index.html" style="display:block; text-align:center; margin-top:20px;">חזרה להזנת לקוחות</a>
+        <a href="index.html">חזרה להזנת לקוחות</a>
         <button onclick="checkAlerts()">רענן בדיקת התראות</button>
     </div>
 
     <script>
-        // פונקציה שמדמה את פעולת השרת: בודקת מה צריך להציג היום
         function checkAlerts() {
             const today = new Date();
-            // יום בחודש של היום (1-31), למשל 17
+            // היום הנוכחי בחודש (לדוגמה: 17)
             const todayDayOfMonth = today.getDate(); 
             const alertsContainer = document.getElementById('alertsContainer');
-            alertsContainer.innerHTML = ''; // מנקה את התצוגה הקודמת
+            alertsContainer.innerHTML = ''; 
             
             // הצגת התאריך הנוכחי
             const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('currentDate').textContent = today.toLocaleDateString('he-IL', dateOptions);
 
-            // 1. מדמה שליפת נתונים מהשרת (LocalStorage)
+            // שליפת הנתונים השמורים
             const clientsJson = localStorage.getItem('monthlyClients');
             const clients = clientsJson ? JSON.parse(clientsJson) : [];
             let alertsFound = false;
 
-            // 2. לולאה על הלקוחות ובדיקה מול היום הנוכחי
             clients.forEach(client => {
+                // הבדיקה המרכזית: האם יום התשלום השמור זהה ליום הנוכחי בחודש
                 if (client.day === todayDayOfMonth) {
                     alertsFound = true;
                     const alertDiv = document.createElement('div');
                     alertDiv.className = 'alert-item';
                     alertDiv.innerHTML = `
                         <div class="alert-details">
-                            <strong>תזכורת!</strong> יש ליצור קשר עם הלקוח: 
+                            <strong>תזכורת דחופה!</strong> יש ליצור קשר עם הלקוח: 
                             <span style="font-weight:bold; font-size:1.2em;">${client.name}</span>
                         </div>
                         <div class="alert-time">
-                            צריך לשלוח כסף ביום: ${client.day} | שעה מומלצת: ${client.time}
+                            יום תשלום חודשי: ${client.day} | שעה מומלצת: ${client.time}
+                            ${client.startDate ? '<br><span>תאריך התחלה: ' + client.startDate + '</span>' : ''}
                         </div>
                     `;
                     alertsContainer.appendChild(alertDiv);
                 }
             });
 
-            // 3. הצגת הודעה אם אין התראות
             if (!alertsFound) {
                 alertsContainer.innerHTML = '<div class="no-alerts">🎉 אין תזכורות תשלום להיום. כל הכבוד! 🎉</div>';
             }
