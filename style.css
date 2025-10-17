@@ -53,7 +53,7 @@ label {
 input[type="text"],
 input[type="number"],
 input[type="time"],
-input[type="date"] {
+input[type="date"] { /* מעודכן: כולל date */
     width: 100%;
     padding: 10px;
     border: 1px solid #ccc;
@@ -91,20 +91,14 @@ button:hover {
     margin-bottom: 15px;
     border-left: 5px solid #d32f2f;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    justify-content: space-between;
+    align-items: center;
     font-size: 1.1em;
     font-weight: 400;
 }
-.alert-header {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    margin-bottom: 5px;
-}
 
 .no-alerts {
-    background-color: #e8f5e9;
+    background-color: #e8f5e9; /* ירוק עדין */
     color: var(--primary-color);
     text-align: center;
     padding: 20px;
@@ -121,8 +115,7 @@ button:hover {
 .alert-time {
     font-size: 0.9em;
     opacity: 0.8;
-    text-align: right;
-    width: 100%;
+    text-align: left;
 }
 a {
     color: var(--primary-color);
@@ -134,29 +127,4 @@ a {
 }
 a:hover {
     text-decoration: underline;
-}
-
-/* עיצוב כפתורי הטיפול */
-.alert-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-    justify-content: flex-end;
-    width: 100%;
-}
-.alert-actions button {
-    width: auto;
-    padding: 8px 15px;
-    font-size: 0.9em;
-    margin-top: 0;
-    transition: background-color 0.3s;
-}
-.delete-btn { background-color: #c62828; }
-.delete-btn:hover { background-color: #b71c1c; }
-.done-btn { background-color: #1976D2; }
-.done-btn:hover { background-color: #1565C0; }
-.permission-btn { 
-    background-color: #7986CB; 
-    margin-bottom: 15px;
-    font-size: 1em;
 }
