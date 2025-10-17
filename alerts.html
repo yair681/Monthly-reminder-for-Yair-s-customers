@@ -6,12 +6,13 @@
     <title>מערכת תזכורות תשלום - התראות</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* עיצוב ספציפי לכפתורים בתוך ההתראה */
+        /* הוספת עיצובים נוספים לכפתורים (כפי שסוכם קודם) */
         .alert-actions {
             display: flex;
             gap: 10px;
             margin-top: 10px;
-            justify-content: flex-end; /* יישור לימין */
+            justify-content: flex-end;
+            width: 100%;
         }
         .alert-actions button {
             width: auto;
@@ -20,35 +21,24 @@
             margin-top: 0;
             transition: opacity 0.3s;
         }
-        .delete-btn {
-            background-color: #c62828; /* אדום כהה */
-        }
-        .delete-btn:hover {
-            background-color: #b71c1c;
-        }
-        .done-btn {
-            background-color: #1976D2; /* כחול */
-        }
-        .done-btn:hover {
-            background-color: #1565C0;
-        }
-        /* התאמה של מבנה ההתראה כדי להכיל את הכפתורים */
-        .alert-item {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-        .alert-header {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            margin-bottom: 5px;
-        }
+        .delete-btn { background-color: #c62828; }
+        .delete-btn:hover { background-color: #b71c1c; }
+        .done-btn { background-color: #1976D2; }
+        .done-btn:hover { background-color: #1565C0; }
+        .alert-item { flex-direction: column; align-items: flex-start; }
+        .alert-header { display: flex; justify-content: space-between; width: 100%; margin-bottom: 5px; }
+        .permission-btn { background-color: #7986CB; margin-bottom: 15px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>התראות תשלום להיום: <span id="currentDate"></span></h1>
         
+        <button class="permission-btn" onclick="requestPushSubscription()">הירשם להתראות דחיפה (גם כשהדף סגור) 📢</button>
+        <p style="font-size:0.8em; color:gray; text-align:center;">
+            * דורש שרת Backend פעיל כדי לשלוח בפועל את ההתראות.
+        </p>
+
         <div id="alertsContainer">
             </div>
 
@@ -57,54 +47,108 @@
     </div>
 
     <script>
-        // *** פונקציות הטיפול בנתונים ***
+        // *** פונקציות Service Worker ורישום לדחיפה (Push) ***
+        
+        // מפתח VAPID ציבורי קונספטואלי (הערה: במערכת אמיתית, זה צריך להיות מפתח שנוצר ע"י השרת שלך)
+        const VAPID_PUBLIC_KEY = 'BPPnN4lW3g44U0oKz-zL-5Yv3iJ_qfFpA5l_qD0eM-J9rP8L_c2s3T7X7S7O2I7N2P8N8E4D5W2Y4A4'; // קונספטואלי
 
-        // פונקציה לשמירת רשימת הלקוחות המעודכנת
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/-/g, '+')
+                .replace(/_/g, '/');
+
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        async function requestPushSubscription() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                alert("❌ הדפדפן שלך אינו תומך בהתראות דחיפה.");
+                return;
+            }
+
+            try {
+                // 1. בקשת אישור מהמשתמש
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    alert('❌ סירבת לקבל התראות דחיפה.');
+                    return;
+                }
+
+                // 2. רישום ה-Service Worker
+                const registration = await navigator.serviceWorker.register('sw.js');
+                
+                // 3. יצירת אובייקט המנוי (Subscription)
+                const subscribeOptions = {
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                };
+
+                const subscription = await registration.pushManager.subscribe(subscribeOptions);
+
+                console.log('User is subscribed:', subscription);
+                alert('✅ נרשמת בהצלחה להתראות דחיפה! עליך לשלוח את המנוי הזה לשרת.');
+
+                // *** נקודה קריטית: לשלוח את אובייקט ה-subscription לשרת Backend ***
+                // במערכת אמיתית:
+                // fetch('/api/subscribe', { method: 'POST', body: JSON.stringify(subscription), headers: { 'Content-Type': 'application/json' }});
+
+            } catch (error) {
+                console.error('שגיאה בתהליך הרישום לדחיפה:', error);
+                alert('❌ שגיאה בהרשמה. ודא שהקובץ sw.js קיים ושאתה משתמש ב-HTTPS/Live Server.');
+            }
+        }
+        
+        // *** פונקציות הטיפול בנתונים הקיימות (ללא שינוי מהותי) ***
+        
+        function displayBrowserNotification(clientName, clientTime) {
+            // זוהי התראת דפדפן רגילה שפועלת כשהדף פתוח. 
+            if (Notification.permission === 'granted' && document.visibilityState === 'visible') {
+                new Notification("🔔 תזכורת תשלום חודשית!", {
+                    body: `יש ליצור קשר עם הלקוח: ${clientName}. שעה מומלצת: ${clientTime}.`,
+                    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💰</text></svg>'
+                });
+            }
+        }
+        
         function saveClients(clients) {
             localStorage.setItem('monthlyClients', JSON.stringify(clients));
         }
 
-        // פונקציה למחיקת לקוח לצמיתות
         function deleteClient(nameToDelete) {
-            if (!confirm(`האם אתה בטוח שברצונך למחוק את הלקוח ${nameToDelete} לצמיתות?`)) {
-                return;
-            }
-
+            if (!confirm(`האם אתה בטוח שברצונך למחוק את הלקוח ${nameToDelete} לצמיתות?`)) return;
             const clientsJson = localStorage.getItem('monthlyClients');
             const clients = clientsJson ? JSON.parse(clientsJson) : [];
-
-            // סינון הלקוח שצריך למחוק
             const updatedClients = clients.filter(client => client.name !== nameToDelete);
-
             saveClients(updatedClients);
             alert(`הלקוח ${nameToDelete} נמחק לצמיתות.`);
-            checkAlerts(); // רענן את התצוגה
+            checkAlerts(); 
         }
 
-        // פונקציה לסימון כ"טופל החודש"
         function markAsDone(nameToMark) {
-            const todayDate = new Date().toISOString().split('T')[0]; // פורמט: YYYY-MM-DD
+            const todayDate = new Date().toISOString().split('T')[0]; 
             const clientsJson = localStorage.getItem('monthlyClients');
             let clients = clientsJson ? JSON.parse(clientsJson) : [];
-
-            // מציאת הלקוח ועדכון שדה lastReminderDate
             clients = clients.map(client => {
                 if (client.name === nameToMark) {
                     return { ...client, lastReminderDate: todayDate };
                 }
                 return client;
             });
-
             saveClients(clients);
             alert(`הלקוח ${nameToMark} סומן כטופל לחודש זה.`);
-            checkAlerts(); // רענן את התצוגה
+            checkAlerts(); 
         }
 
-        // *** פונקציה ראשית לבדיקה והצגה ***
         function checkAlerts() {
             const today = new Date();
             const todayDayOfMonth = today.getDate(); 
-            // פורמט: YYYY-MM-DD של תחילת החודש הנוכחי
             const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
 
             const alertsContainer = document.getElementById('alertsContainer');
@@ -119,15 +163,14 @@
 
             clients.forEach(client => {
                 const isPaymentDay = client.day === todayDayOfMonth;
-                
-                // בדיקה אם סומן כטופל החודש:
-                // 1. קיים שדה lastReminderDate
-                // 2. התאריך האחרון שסומן גדול או שווה לתחילת החודש הנוכחי (כלומר, טופל החודש)
                 const isMarkedDoneThisMonth = client.lastReminderDate && client.lastReminderDate >= startOfCurrentMonth;
 
-                // הצג התראה רק אם זה יום התשלום *ולא* סומן כטופל החודש
                 if (isPaymentDay && !isMarkedDoneThisMonth) {
                     alertsFound = true;
+                    
+                    // הפעלת התראת הדפדפן כאשר הדף נטען
+                    displayBrowserNotification(client.name, client.time);
+
                     const alertDiv = document.createElement('div');
                     alertDiv.className = 'alert-item';
                     alertDiv.innerHTML = `
@@ -139,6 +182,7 @@
                         </div>
                         <div class="alert-time">
                             יום תשלום חודשי: ${client.day} | שעה מומלצת: ${client.time}
+                            ${client.startDate ? '<br><span>תאריך התחלה: ' + client.startDate + '</span>' : ''}
                         </div>
                         <div class="alert-actions">
                             <button class="done-btn" onclick="markAsDone('${client.name}')">הזכרתי החודש ✅</button>
@@ -154,7 +198,6 @@
             }
         }
 
-        // הפעלת הבדיקה מיד לאחר טעינת הדף
         checkAlerts();
     </script>
 </body>
