@@ -1,17 +1,53 @@
-// sw.js
-// קובץ זה חייב להיות מוצג על ידי שרת אמיתי (או לפחות על ידי Live Server)
-// כדי שהדפדפן יאפשר את רישום ה-Service Worker.
+// sw.js (קובץ זה צריך להיות בתיקייה הראשית)
+const CACHE_NAME = 'monthly-reminder-v1';
+const urlsToCache = [
+    '/',
+    '/index.html',
+    '/alerts.html',
+    '/style.css',
+    '/manifest.json',
+    // יש להוסיף את קבצי האייקונים שלך לכאן:
+    '/icon-192.png', 
+    '/icon-512.png'
+];
 
+// 1. אירוע התקנה: שמירת הקבצים בקאש
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then(cache => {
+                console.log('Opened cache and adding files');
+                return cache.addAll(urlsToCache);
+            })
+            .catch(error => {
+                console.error('Cache installation failed:', error);
+            })
+    );
+});
+
+// 2. אירוע שליפה: הגשת קבצים מהקאש כשהאפליקציה במצב לא מקוון
+self.addEventListener('fetch', event => {
+    event.respondWith(
+        caches.match(event.request)
+            .then(response => {
+                if (response) {
+                    return response;
+                }
+                return fetch(event.request);
+            })
+    );
+});
+
+// 3. לוגיקת PUSH (להתראות דחיפה מהשרת)
 self.addEventListener('push', event => {
-    // זה יקרה רק אם שרת backend אמיתי ישלח התראה!
-    const data = event.data ? event.data.json() : { title: 'התראה חודשית אוטומטית', body: 'הגיע הזמן לבדוק את התשלומים!', url: '/alerts.html' };
+    const data = event.data ? event.data.json() : { title: 'תזכורת אוטומטית', body: 'יש לקוחות לבדיקה.' };
 
     const title = data.title;
     const options = {
         body: data.body,
-        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💰</text></svg>',
+        icon: '/icon-192.png', 
         data: {
-            url: data.url // הנתיב לפתיחה בלחיצה
+            url: data.url || '/alerts.html'
         }
     };
 
@@ -20,11 +56,8 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
     event.notification.close();
-    // פתיחת הדף alerts.html בלחיצה על ההתראה
     const targetUrl = event.notification.data.url || '/alerts.html'; 
     event.waitUntil(
         clients.openWindow(targetUrl) 
     );
 });
-
-console.log('Service Worker נרשם בהצלחה.');
