@@ -5,6 +5,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מערכת תזכורות תשלום - התראות</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* עיצוב ספציפי לכפתורים בתוך ההתראה */
+        .alert-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            justify-content: flex-end; /* יישור לימין */
+        }
+        .alert-actions button {
+            width: auto;
+            padding: 8px 15px;
+            font-size: 0.9em;
+            margin-top: 0;
+            transition: opacity 0.3s;
+        }
+        .delete-btn {
+            background-color: #c62828; /* אדום כהה */
+        }
+        .delete-btn:hover {
+            background-color: #b71c1c;
+        }
+        .done-btn {
+            background-color: #1976D2; /* כחול */
+        }
+        .done-btn:hover {
+            background-color: #1565C0;
+        }
+        /* התאמה של מבנה ההתראה כדי להכיל את הכפתורים */
+        .alert-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -18,36 +57,92 @@
     </div>
 
     <script>
+        // *** פונקציות הטיפול בנתונים ***
+
+        // פונקציה לשמירת רשימת הלקוחות המעודכנת
+        function saveClients(clients) {
+            localStorage.setItem('monthlyClients', JSON.stringify(clients));
+        }
+
+        // פונקציה למחיקת לקוח לצמיתות
+        function deleteClient(nameToDelete) {
+            if (!confirm(`האם אתה בטוח שברצונך למחוק את הלקוח ${nameToDelete} לצמיתות?`)) {
+                return;
+            }
+
+            const clientsJson = localStorage.getItem('monthlyClients');
+            const clients = clientsJson ? JSON.parse(clientsJson) : [];
+
+            // סינון הלקוח שצריך למחוק
+            const updatedClients = clients.filter(client => client.name !== nameToDelete);
+
+            saveClients(updatedClients);
+            alert(`הלקוח ${nameToDelete} נמחק לצמיתות.`);
+            checkAlerts(); // רענן את התצוגה
+        }
+
+        // פונקציה לסימון כ"טופל החודש"
+        function markAsDone(nameToMark) {
+            const todayDate = new Date().toISOString().split('T')[0]; // פורמט: YYYY-MM-DD
+            const clientsJson = localStorage.getItem('monthlyClients');
+            let clients = clientsJson ? JSON.parse(clientsJson) : [];
+
+            // מציאת הלקוח ועדכון שדה lastReminderDate
+            clients = clients.map(client => {
+                if (client.name === nameToMark) {
+                    return { ...client, lastReminderDate: todayDate };
+                }
+                return client;
+            });
+
+            saveClients(clients);
+            alert(`הלקוח ${nameToMark} סומן כטופל לחודש זה.`);
+            checkAlerts(); // רענן את התצוגה
+        }
+
+        // *** פונקציה ראשית לבדיקה והצגה ***
         function checkAlerts() {
             const today = new Date();
-            // היום הנוכחי בחודש (לדוגמה: 17)
             const todayDayOfMonth = today.getDate(); 
+            // פורמט: YYYY-MM-DD של תחילת החודש הנוכחי
+            const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+
             const alertsContainer = document.getElementById('alertsContainer');
             alertsContainer.innerHTML = ''; 
             
-            // הצגת התאריך הנוכחי
             const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('currentDate').textContent = today.toLocaleDateString('he-IL', dateOptions);
 
-            // שליפת הנתונים השמורים
             const clientsJson = localStorage.getItem('monthlyClients');
             const clients = clientsJson ? JSON.parse(clientsJson) : [];
             let alertsFound = false;
 
             clients.forEach(client => {
-                // הבדיקה המרכזית: האם יום התשלום השמור זהה ליום הנוכחי בחודש
-                if (client.day === todayDayOfMonth) {
+                const isPaymentDay = client.day === todayDayOfMonth;
+                
+                // בדיקה אם סומן כטופל החודש:
+                // 1. קיים שדה lastReminderDate
+                // 2. התאריך האחרון שסומן גדול או שווה לתחילת החודש הנוכחי (כלומר, טופל החודש)
+                const isMarkedDoneThisMonth = client.lastReminderDate && client.lastReminderDate >= startOfCurrentMonth;
+
+                // הצג התראה רק אם זה יום התשלום *ולא* סומן כטופל החודש
+                if (isPaymentDay && !isMarkedDoneThisMonth) {
                     alertsFound = true;
                     const alertDiv = document.createElement('div');
                     alertDiv.className = 'alert-item';
                     alertDiv.innerHTML = `
-                        <div class="alert-details">
-                            <strong>תזכורת דחופה!</strong> יש ליצור קשר עם הלקוח: 
-                            <span style="font-weight:bold; font-size:1.2em;">${client.name}</span>
+                        <div class="alert-header">
+                            <div class="alert-details">
+                                <strong>תזכורת דחופה!</strong> יש ליצור קשר עם הלקוח: 
+                                <span style="font-weight:bold; font-size:1.2em;">${client.name}</span>
+                            </div>
                         </div>
                         <div class="alert-time">
                             יום תשלום חודשי: ${client.day} | שעה מומלצת: ${client.time}
-                            ${client.startDate ? '<br><span>תאריך התחלה: ' + client.startDate + '</span>' : ''}
+                        </div>
+                        <div class="alert-actions">
+                            <button class="done-btn" onclick="markAsDone('${client.name}')">הזכרתי החודש ✅</button>
+                            <button class="delete-btn" onclick="deleteClient('${client.name}')">מחק התראה לתמיד 🗑️</button>
                         </div>
                     `;
                     alertsContainer.appendChild(alertDiv);
@@ -55,7 +150,7 @@
             });
 
             if (!alertsFound) {
-                alertsContainer.innerHTML = '<div class="no-alerts">🎉 אין תזכורות תשלום להיום. כל הכבוד! 🎉</div>';
+                alertsContainer.innerHTML = '<div class="no-alerts">🎉 אין תזכורות תשלום פעילות להיום. 🎉</div>';
             }
         }
 
